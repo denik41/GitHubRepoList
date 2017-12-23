@@ -7,22 +7,31 @@ class RequestsList extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            pullRequests: null
+            pullRequests: null,
+            refreshing: false
         }
     }
 
     componentDidMount() {
+        this.fetchPullRequests();
+    }
+
+    fetchPullRequests = () => {
         let url = this.props.repository.pulls_url;
         fetch(`${url.substring(0, url.indexOf("{"))}?sort=created&direction=desc`)
             .then(response => response.json())
             .then(responseJson => {
                 const lastPulls = responseJson.slice(0, 10);
-                this.setState({pullRequests: lastPulls});
+                this.setState({
+                    pullRequests: lastPulls,
+                    refreshing: false
+                });
             })
             .catch(error => {
                 console.error(error);
+                this.setState({refreshing: false});
             });
-    }
+    };
 
     renderItem = ({item, index}) => <PullRequest
         title={item.title}
@@ -30,12 +39,28 @@ class RequestsList extends Component {
         author={item.user.login}
         number={item.number}/>;
 
+    renderHeader = () => {
+        return <View style={{borderBottomWidth: 1}}>
+            <Text style={styles.title}>{this.props.repository.name}</Text>
+            <Text style={[styles.title, {
+                marginTop: 5,
+                marginBottom: 10
+            }]}>10 last Pull Requests</Text>
+        </View>;
+    };
+
+    handleRefresh = () => {
+        this.setState({
+            refreshing: true
+        }, () => {
+            this.fetchPullRequests();
+        });
+    };
+
     render() {
         const pullRequests = this.state.pullRequests;
 
         return <View>
-            <Text style={styles.title}>{this.props.repository.name}</Text>
-            <Text style={[styles.title, {marginTop: 5}]}>10 last Pull Requests</Text>
             <View>
                 {pullRequests && pullRequests.length === 0 ?
                     <Text style={styles.noPulls}>No Pull Requests</Text> :
@@ -45,6 +70,9 @@ class RequestsList extends Component {
                         keyExtractor={(item, index) => index}
                         renderItem={this.renderItem}
                         style={styles.list}
+                        ListHeaderComponent={this.renderHeader}
+                        refreshing={this.state.refreshing}
+                        onRefresh={this.handleRefresh}
                     />}
             </View>
         </View>
@@ -58,8 +86,7 @@ const styles = StyleSheet.create({
         marginTop: 15
     },
     list: {
-        borderTopWidth: 1,
-        marginTop: 15
+        borderTopWidth: 1
     },
     noPulls: {
         fontSize: 20,

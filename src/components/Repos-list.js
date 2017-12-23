@@ -8,18 +8,25 @@ class RepoList extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            list: []
+            list: [],
+            refreshing: false
         };
     }
 
     componentDidMount() {
+        this.fetchRepos();
+    }
+
+    fetchRepos(callback = () => {}) {
         fetch('https://api.github.com/search/repositories?q=stars:>50000&sort=stars&order=desc')
             .then(response => response.json())
             .then(responseJson => {
                 this.setState({list: responseJson.items});
+                callback();
             })
             .catch(error => {
                 console.error(error);
+                callback();
             });
     }
 
@@ -37,9 +44,22 @@ class RepoList extends Component {
             this.onPressItem(item);
     }}/>;
 
+    handleRefresh = () => {
+        this.setState({
+            refreshing: true
+        }, () => {
+            this.fetchRepos(() => {
+                this.setState({refreshing: false})
+            });
+        });
+    };
+
+    renderHeader = () => {
+        return <Text style={style.title}>Top Repositories</Text>;
+    };
+
     render() {
         return <View>
-            <Text style={style.title}>Top Repositories</Text>
             <View>
                 <FlatList
                     data={this.state.list}
@@ -47,6 +67,9 @@ class RepoList extends Component {
                     keyExtractor={(item, index) => index}
                     renderItem={this.renderItem}
                     style={style.list}
+                    refreshing={this.state.refreshing}
+                    onRefresh={this.handleRefresh}
+                    ListHeaderComponent={this.renderHeader}
                 />
             </View>
         </View>
@@ -57,22 +80,19 @@ const style = StyleSheet.create({
     title: {
         fontSize: 24,
         textAlign: 'center',
-        marginBottom: 15,
-        marginTop: 15
+        paddingBottom: 15,
+        marginTop: 15,
+        borderBottomWidth: 1
     },
     list: {
         borderTopWidth: 1,
         height: '100%'
     },
-    container: {
-
-    }
+    container: {}
 });
 
 export default connect(
-    state => ({
-
-    }),
+    state => ({}),
     dispatch => ({
         chooseRepo: (data) => {
             dispatch(chooseRepo(data))
